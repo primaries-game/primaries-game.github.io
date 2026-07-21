@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מי קיבל יותר? — משחק פריימריז הדמוקרטים מול הליכוד</title>
 <meta name="description" content="מועמד.ת מהדמוקרטים מול צירוף מועמדי ליכוד — מי קיבל יותר קולות בפריימריז שלו? משחק ניחושים עם תמונות אמיתיות.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://primaries-game.github.io/">
+<meta property="og:title" content="מי קיבל יותר? — משחק פריימריז הדמוקרטים מול הליכוד">
+<meta property="og:description" content="נחשו מי קיבל יותר קולות: מועמד.ת מהדמוקרטים או צירוף חברי ליכוד ביחד. 10 סיבובים — כמה תצליחו?">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   .tabular-nums{font-variant-numeric:tabular-nums}
@@ -95,10 +99,15 @@
       <h2 class="text-2xl font-black text-blue-900 mb-1">המשחק נגמר!</h2>
       <div class="text-4xl font-black text-slate-900 tabular-nums my-3"><span id="final-score">0</span>/<span id="final-total">10</span></div>
       <p id="final-msg" class="text-slate-600 mb-6"></p>
-      <div class="flex flex-col sm:flex-row justify-center gap-3">
-        <button id="play-again" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שחקו שוב 🔄</button>
-        <button id="share-score" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שתפו את התוצאה 📤</button>
+      <div class="mb-5">
+        <div class="text-sm font-semibold text-slate-500 mb-2">שתפו את התוצאה:</div>
+        <div class="flex justify-center gap-3">
+          <button id="share-tw" class="bg-slate-900 hover:bg-black text-white font-bold px-5 py-3 rounded-xl shadow transition-colors" aria-label="שיתוף ב-X">𝕏</button>
+          <button id="share-fb" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3 rounded-xl shadow transition-colors" aria-label="שיתוף בפייסבוק">f&rlm; פייסבוק</button>
+          <button id="share-wa" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-xl shadow transition-colors" aria-label="שיתוף בוואטסאפ">וואטסאפ</button>
+        </div>
       </div>
+      <button id="play-again" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שחקו שוב 🔄</button>
     </div>
 
   </section>
@@ -521,24 +530,34 @@ function switchTab(game){
 document.getElementById("tab-game").addEventListener("click", () => switchTab(true));
 document.getElementById("tab-explore").addEventListener("click", () => switchTab(false));
 
-function shareText(text){
-  const full = `${text}\n${location.href}`;
-  if (navigator.share){
-    navigator.share({text: full}).catch(() => fallbackShare(full));
-  } else {
-    fallbackShare(full);
-  }
+/* Canonical URL for shares — never location.href, so a locally-opened or
+   mirrored copy can't propagate the wrong address. */
+const GAME_URL = "https://primaries-game.github.io/";
+
+function scoreMsg(){
+  return `הצלחתי לנחש ${score} מתוך ${ROUNDS_TOTAL} במשחק הפריימריז — כמה אתם תצליחו?`;
 }
-function fallbackShare(full){
-  window.open("https://wa.me/?text=" + encodeURIComponent(full), "_blank", "noopener");
-}
-document.getElementById("share-score").addEventListener("click", () => {
-  shareText(`קלעתי ${score}/${ROUNDS_TOTAL} במשחק "מי קיבל יותר?" — פריימריז הדמוקרטים מול הליכוד. נסו גם אתם:`);
+document.getElementById("share-tw").addEventListener("click", () => {
+  window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(scoreMsg()) +
+    "&url=" + encodeURIComponent(GAME_URL), "_blank", "noopener");
+});
+document.getElementById("share-fb").addEventListener("click", () => {
+  // Facebook takes only the URL; the text comes from the page's og: tags
+  window.open("https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(GAME_URL) +
+    "&quote=" + encodeURIComponent(scoreMsg()), "_blank", "noopener");
+});
+document.getElementById("share-wa").addEventListener("click", () => {
+  window.open("https://wa.me/?text=" + encodeURIComponent(scoreMsg() + "\n" + GAME_URL), "_blank", "noopener");
 });
 document.getElementById("ex-share").addEventListener("click", () => {
   if (!currentExplore) return;
   const {dem, bundle, sum} = currentExplore;
-  shareText(`${dem.name} קיבל.ה בפריימריז הדמוקרטים ${fmt(dem.votes)} קולות — יותר מ${bundle.map(c => c.name).join(" + ")} ביחד (${fmt(sum)}) בפריימריז הליכוד. בדקו בעצמכם:`);
+  const text = `${dem.name} קיבל.ה בפריימריז הדמוקרטים ${fmt(dem.votes)} קולות — יותר מ${bundle.map(c => c.name).join(" + ")} ביחד (${fmt(sum)}) בפריימריז הליכוד. בדקו בעצמכם:\n${GAME_URL}`;
+  if (navigator.share){
+    navigator.share({text}).catch(() => {});
+  } else {
+    window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener");
+  }
 });
 
 function renderCredits(){
