@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מי קיבל יותר? — משחק פריימריז הדמוקרטים מול הליכוד</title>
+<meta name="description" content="מועמד.ת מהדמוקרטים מול צירוף מועמדי ליכוד — מי קיבל יותר קולות בפריימריז שלו? משחק ניחושים עם תמונות אמיתיות.">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .tabular-nums{font-variant-numeric:tabular-nums}
+  .reveal{opacity:0;transform:translateY(6px) scale(.97);transition:opacity .35s ease,transform .35s ease}
+  .reveal.show{opacity:1;transform:translateY(0) scale(1)}
+  .card-btn{transition:transform .15s ease,box-shadow .15s ease}
+  .card-btn:active{transform:scale(.97)}
+  .card-btn:disabled{cursor:default}
+  @keyframes pop{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+  .pop{animation:pop .4s ease}
+  .avatar{width:5.5rem;height:5.5rem;object-fit:cover;border-radius:9999px;border:3px solid rgba(255,255,255,.5)}
+  .avatar-sm{width:3.25rem;height:3.25rem;object-fit:cover;border-radius:9999px;border:2px solid rgba(255,255,255,.5)}
+  .avatar-chip{width:3.5rem;height:3.5rem;object-fit:cover;border-radius:9999px;border:2px solid #cbd5e1}
+  details>summary{list-style:none}details>summary::-webkit-details-marker{display:none}
+</style>
+</head>
+<body class="bg-sky-50 text-slate-800 font-sans min-h-screen pb-16">
+<div class="max-w-3xl mx-auto px-4 py-8">
+
+  <header class="text-center mb-6">
+    <p class="text-sm font-semibold text-blue-700 mb-1">🎮 מי קיבל יותר?</p>
+    <h1 class="text-3xl md:text-4xl font-extrabold text-blue-900 leading-tight mb-2">
+      פריימריז הדמוקרטים מול פריימריז הליכוד
+    </h1>
+    <p class="text-slate-600 text-sm md:text-base max-w-xl mx-auto">
+      מצד אחד מועמד.ת מ״הדמוקרטים״ (2026), מהצד השני צירוף חברי ליכוד (פריימריז 2022). נחשו מי קיבל יותר קולות.
+    </p>
+  </header>
+
+  <!-- Tab switcher -->
+  <div class="flex justify-center mb-6">
+    <div class="inline-flex bg-white rounded-xl shadow p-1 text-sm font-semibold">
+      <button id="tab-game" class="px-5 py-2 rounded-lg bg-blue-700 text-white transition">המשחק</button>
+      <button id="tab-explore" class="px-5 py-2 rounded-lg text-slate-600 transition">מצאו צירוף</button>
+    </div>
+  </div>
+
+  <!-- ===================== TAB 1: GAME ===================== -->
+  <section id="panel-game">
+
+    <!-- Landing / intro screen -->
+    <div id="game-intro" class="bg-white shadow-xl rounded-2xl p-8 text-center">
+      <div class="text-5xl mb-4">🗳️</div>
+      <h2 class="text-2xl font-black text-blue-900 mb-3">איך משחקים?</h2>
+      <p class="text-slate-700 max-w-lg mx-auto leading-relaxed mb-2">
+        בכל סיבוב תראו מצד אחד מועמד.ת מפריימריז <b>הדמוקרטים</b> (2026),
+        ומהצד השני צירוף של 2–3 חברי כנסת ושרים מפריימריז <b>הליכוד</b> (2022).
+      </p>
+      <p class="text-slate-700 max-w-lg mx-auto leading-relaxed mb-6">
+        נחשו מי קיבל <b>יותר קולות</b> — לחיצה על הצד שלדעתכם ניצח.
+        <b>10 סיבובים</b>, וזה פחות קל ממה שנדמה.
+      </p>
+      <button id="start-game" class="bg-blue-700 hover:bg-blue-800 text-white font-bold text-lg px-10 py-4 rounded-xl shadow transition-colors">שחקו עכשיו ◄</button>
+    </div>
+
+    <div id="game-hud" class="hidden flex justify-center items-center gap-6 mb-4 text-sm font-semibold text-slate-700">
+      <div>סיבוב <span id="round-no" class="tabular-nums">1</span>/<span class="tabular-nums" id="rounds-total">10</span></div>
+      <div>✅ ניקוד: <span id="score" class="tabular-nums">0</span></div>
+      <div>🏆 שיא: <span id="best-score" class="tabular-nums">–</span></div>
+    </div>
+
+    <div id="game-board" class="hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <button id="pick-dem" class="card-btn text-center bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-xl p-5">
+          <div class="text-xs font-semibold text-blue-100 mb-3">🕊️ הדמוקרטים</div>
+          <img id="dem-photo" class="avatar mx-auto mb-3" alt="">
+          <div id="dem-name" class="text-lg font-black mb-2"></div>
+          <div id="dem-votes" class="reveal text-2xl font-black tabular-nums"></div>
+        </button>
+        <button id="pick-likud" class="card-btn text-center bg-slate-800 hover:bg-slate-900 text-white rounded-2xl shadow-xl p-5">
+          <div class="text-xs font-semibold text-slate-300 mb-3">🏛️ הליכוד (ביחד)</div>
+          <div id="likud-photos" class="flex justify-center items-center gap-2 mb-3"></div>
+          <div id="likud-names" class="text-sm font-bold mb-2 leading-snug"></div>
+          <div id="likud-votes" class="reveal text-2xl font-black tabular-nums"></div>
+        </button>
+      </div>
+
+      <div id="verdict" class="text-center font-bold text-lg mb-4 h-7"></div>
+
+      <div class="text-center">
+        <button id="next-round" class="hidden bg-blue-700 hover:bg-blue-800 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">הסיבוב הבא ←</button>
+      </div>
+    </div>
+
+    <!-- End-of-game screen -->
+    <div id="game-over" class="hidden bg-white shadow-xl rounded-2xl p-8 text-center">
+      <div class="text-5xl mb-3" id="final-emoji">🏁</div>
+      <h2 class="text-2xl font-black text-blue-900 mb-1">המשחק נגמר!</h2>
+      <div class="text-4xl font-black text-slate-900 tabular-nums my-3"><span id="final-score">0</span>/<span id="final-total">10</span></div>
+      <p id="final-msg" class="text-slate-600 mb-6"></p>
+      <div class="flex flex-col sm:flex-row justify-center gap-3">
+        <button id="play-again" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שחקו שוב 🔄</button>
+        <button id="share-score" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שתפו את התוצאה 📤</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== TAB 2: EXPLORER ===================== -->
+  <section id="panel-explore" class="hidden">
+    <div class="bg-white shadow-xl rounded-2xl p-5 mb-4">
+      <h2 class="text-xl font-extrabold text-blue-900 mb-1">כמה חברי ליכוד שווה מועמד.ת אחד.ת?</h2>
+      <p class="text-sm text-slate-600 mb-4">בחרו מועמד.ת מרשימת הדמוקרטים, ונמצא את צירוף חברי הליכוד הבכירים ביותר שקיבלו ביחד <b>פחות</b> קולות בפריימריז שלהם.</p>
+      <div id="dem-grid" class="grid grid-cols-4 sm:grid-cols-5 gap-2"></div>
+    </div>
+
+    <div id="explore-result" class="hidden bg-white shadow-xl rounded-2xl p-6 text-center">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch mb-4">
+        <div class="bg-blue-600 text-white rounded-2xl p-5">
+          <div class="text-xs font-semibold text-blue-100 mb-3">🕊️ הדמוקרטים</div>
+          <img id="ex-dem-photo" class="avatar mx-auto mb-3" alt="">
+          <div id="ex-dem-name" class="text-lg font-black mb-1"></div>
+          <div id="ex-dem-place" class="text-xs text-blue-200 mb-2"></div>
+          <div id="ex-dem-votes" class="text-2xl font-black tabular-nums"></div>
+        </div>
+        <div class="bg-slate-800 text-white rounded-2xl p-5">
+          <div class="text-xs font-semibold text-slate-300 mb-3">🏛️ הליכוד (ביחד)</div>
+          <div id="ex-likud-photos" class="flex justify-center items-center gap-2 mb-3"></div>
+          <div id="ex-likud-names" class="text-sm font-bold mb-2 leading-snug"></div>
+          <div id="ex-likud-votes" class="text-2xl font-black tabular-nums"></div>
+        </div>
+      </div>
+      <p id="ex-summary" class="text-slate-700 font-semibold mb-4"></p>
+      <button id="ex-share" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שתפו 📤</button>
+    </div>
+  </section>
+
+  <footer class="text-center text-xs text-slate-400 mt-10">
+    <p class="mb-1">נתונים: תוצאות פריימריז הדמוקרטים 2026 (מקומות 2–21) ופריימריז הליכוד 2022 (ח״כים ושרים מכהנים). תמונות: ויקיפדיה/ויקישיתוף.</p>
+    <details class="inline-block">
+      <summary class="cursor-pointer text-blue-600 hover:underline">קרדיט תמונות</summary>
+      <div id="photo-credits" class="text-right max-w-xl mx-auto mt-2 leading-relaxed"></div>
+    </details>
+  </footer>
+</div>
+
+<script>
+/* ================= DATA =================
+   Democrats: the official final-list places 2–21 of the 2026 primary
+   (place 1, יאיר גולן, is the unelected fixed chair — no vote count).
+   Likud: everyone who is TODAY a sitting Likud MK or a minister in the
+   current government AND has a personal vote count in the 2022 primary
+   (chairman-reserved appointees with no vote count are excluded). */
+const DEMOCRATS = [
+  {name:"נעמה לזימי", votes:87774, place:2, photo:"images/d01.jpg"},
+  {name:"גלעד קריב", votes:83084, place:3, photo:"images/d02.png"},
+  {name:"אפרת רייטן", votes:73915, place:4, photo:"images/d03.jpg"},
+  {name:"יאיא פינק", votes:66233, place:5, photo:"images/d04.jpg"},
+  {name:"גבי לסקי", votes:35493, place:6, photo:"images/d08.jpg"},
+  {name:"עמרי רונן", votes:43246, place:7, photo:"images/d05.jpg"},
+  {name:"מיכל רוזין", votes:23345, place:8, photo:"images/d09.jpg"},
+  {name:"משה רדמן אבוטבול", votes:39583, place:9, photo:"images/d06.png"},
+  {name:"סומיה בשיר", votes:18848, place:10, photo:"images/d10.jpg"},
+  {name:"נמרוד שפר", votes:37355, place:11, photo:"images/d07.jpg"},
+  {name:"מורן זר קצנשטיין", votes:17005, place:12, photo:"images/d12.jpg"},
+  {name:"אבי דבוש", votes:17772, place:13, photo:"images/d11.jpg"},
+  {name:"אמילי מואטי", votes:14174, place:14, photo:"images/d18.jpg"},
+  {name:"תומר אביטל", votes:16913, place:15, photo:"images/d13.jpg"},
+  {name:"נאווה רוזוליו", votes:12232, place:16, photo:"images/d20.jpg"},
+  {name:"רם שפע", votes:15596, place:17, photo:"images/d14.jpg"},
+  {name:"עלי סלאלחה", votes:13174, place:18, photo:"images/d19.jpg"},
+  {name:"רתם סיון", votes:11120, place:19, photo:"images/d21.jpg"},
+  {name:"ערן עציון", votes:15473, place:20, photo:"images/d15.jpg"},
+  {name:"מורן מישל", votes:8245, place:21, photo:"images/d22.jpg"},
+];
+
+const LIKUD = [
+  {name:"יריב לוין", votes:48384, photo:"images/l01.jpg"},
+  {name:"אלי כהן", votes:46167, photo:"images/l32.jpg"},
+  {name:"דוד אמסלם", votes:38305, photo:"images/l35.jpg"},
+  {name:"אמיר אוחנה", votes:37712, photo:"images/l02.jpg"},
+  {name:"יואב קיש", votes:34760, photo:"images/l31.jpg"},
+  {name:"ניר ברקת", votes:34521, photo:"images/l03.jpg"},
+  {name:"מירי רגב", votes:32661, photo:"images/l33.jpg"},
+  {name:"מיקי זוהר", votes:31215, photo:"images/l30.jpg"},
+  {name:"אבי דיכטר", votes:31195, photo:"images/l04.jpg"},
+  {name:"ישראל כ\"ץ", votes:30563, photo:"images/l05.jpg"},
+  {name:"שלמה קרעי", votes:29640, photo:"images/l06.jpg"},
+  {name:"דוד ביטן", votes:26955, photo:"images/l07.jpg"},
+  {name:"יולי אדלשטיין", votes:23887, photo:"images/l08.jpg"},
+  {name:"חיים כץ", votes:23764, photo:"images/l34.jpg"},
+  {name:"גלית דיסטל-אטבריאן", votes:21361, photo:"images/l09.jpg"},
+  {name:"בועז ביסמוט", votes:20762, photo:"images/l10.jpg"},
+  {name:"אופיר כץ", votes:20531, photo:"images/l11.jpg"},
+  {name:"גילה גמליאל", votes:18778, photo:"images/l12.jpg"},
+  {name:"מאי גולן", votes:18108, photo:"images/l13.jpg"},
+  {name:"אתי עטייה", votes:18006, photo:"images/l14.png"},
+  {name:"קטי שטרית", votes:17689, photo:"images/l15.jpg"},
+  {name:"טלי גוטליב", votes:10754, photo:"images/l16.jpg"},
+  {name:"משה פסל", votes:8391, photo:"images/l17.jpg"},
+  {name:"דן אילוז", votes:6013, photo:"images/l18.jpg"},
+  {name:"אליהו רביבו", votes:6002, photo:"images/l19.jpg"},
+  {name:"שלום דנינו", votes:5890, photo:"images/l20.jpg"},
+  {name:"עפיף עבד", votes:5631, photo:"images/l21.jpg"},
+  {name:"חנוך מילביצקי", votes:4592, photo:"images/l22.jpg"},
+  {name:"ניסים ואטורי", votes:4547, photo:"images/l23.jpg"},
+  {name:"אריאל קלנר", votes:3358, photo:"images/l24.jpg"},
+  {name:"עמית הלוי", votes:3334, photo:"images/l25.jpg"},
+  {name:"אביחי בוארון", votes:2360, photo:"images/l26.jpg"},
+  {name:"אליהו דלל", votes:2313, photo:"images/l27.jpg"},
+  {name:"ששון גואטה", votes:2158, photo:"images/l28.jpg"},
+  {name:"אושר שקלים", votes:1635, photo:"images/l29.jpg"},
+];
+LIKUD.sort((a, b) => b.votes - a.votes);
+
+/* Per-image attribution from the Commons license audit (2026-07-22). All
+   images are freely licensed; CC BY / CC BY-SA require author + license +
+   source link, which the credits footer renders. CC0 entries kept as
+   courtesy credits. */
+const LIC = {
+  "bysa4": {label:"CC BY-SA 4.0", url:"https://creativecommons.org/licenses/by-sa/4.0/"},
+  "bysa3": {label:"CC BY-SA 3.0", url:"https://creativecommons.org/licenses/by-sa/3.0/"},
+  "by4":   {label:"CC BY 4.0",    url:"https://creativecommons.org/licenses/by/4.0/"},
+  "by2":   {label:"CC BY 2.0",    url:"https://creativecommons.org/licenses/by/2.0/"},
+  "cc0":   {label:"CC0",          url:"https://creativecommons.org/publicdomain/zero/1.0/"},
+};
+const PHOTO_CREDITS = [
+  {person:"נעמה לזימי", author:"Mayan Tarabish", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Naama_lazimi_%28cropped%29.jpg"},
+  {person:"גלעד קריב", author:"Rami Zarnegar", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Gilad_Kariv.png"},
+  {person:"אפרת רייטן", author:"Shai Franco", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Efrat_Rayten.jpg"},
+  {person:"יאיא פינק", author:"Roby Yahav", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Yaya_Fink_%28cropped%29.jpg"},
+  {person:"עמרי רונן", author:"Asaf Ben Zichri", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Omri_Ronen_2024_%28cropped%29.jpg"},
+  {person:"משה רדמן אבוטבול", author:"Pixie.tt", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Moshe_Radman.png"},
+  {person:"נמרוד שפר", author:'דובר צה"ל', lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Tat-Aluf_Nimrod_Shefer_1.jpg"},
+  {person:"גבי לסקי", author:"Oren Rozen", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Gaby_Lasky_180222_023_%28cropped%29.jpg"},
+  {person:"מיכל רוזין", author:"Elad Malka", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:%D7%9E%D7%99%D7%9B%D7%9C_%D7%A8%D7%95%D7%96%D7%99%D7%9F_2026.jpg"},
+  {person:"סומיה בשיר", author:"סומיה בשיר", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Somaya_Bashir.jpg"},
+  {person:"אבי דבוש", author:"יעל אילן", lic:"cc0", url:"https://commons.wikimedia.org/wiki/File:Avi_Dabush_2025a.jpg"},
+  {person:"מורן זר קצנשטיין", author:"יבגני גבריאלוביץ", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Moran_Zer_Katzenstein_2026_%28cropped%29.jpg"},
+  {person:"אמילי מואטי", author:"Dan Haimovich", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Emilie_Moatti%2C_2018_%28cropped%29.jpg"},
+  {person:"תומר אביטל", author:"Pinhas Stern", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Tomer_Avital_-_Israeli_Journalist_-_2024.jpg"},
+  {person:"נאווה רוזוליו", author:"בן כהן", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Nava_Rozolyo_Photo_by_Ben_Cohen_%28cropped%29.jpg"},
+  {person:"רם שפע", author:"Shlomi Amsalem", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Ram_Shefa_%28SHL_8927%29.jpg"},
+  {person:"עלי סלאלחה", author:"צלם הכנסת", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Ali_Salalcha_%28salalja%29.jpg"},
+  {person:"רתם סיון", author:"אראל בובליל רינגלר", lic:"by4", url:"https://commons.wikimedia.org/wiki/File:Dr._Rotem_Sivan-Hofman.jpg"},
+  {person:"ערן עציון", author:"ניב קנטור", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Eran_Etzion.jpg"},
+  {person:"מורן מישל", author:"Yifat Yogev", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Moran_Michel.jpg"},
+  {person:"יריב לוין", author:"Avi Ohayon", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Yariv_Levin_1_%28cropped%29.jpg"},
+  {person:"אלי כהן", author:"Ofir Abe", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:%D7%A9%D7%A8_%D7%94%D7%9B%D7%9C%D7%9B%D7%9C%D7%94_%D7%95%D7%94%D7%AA%D7%A2%D7%A9%D7%99%D7%99%D7%94%2C_%D7%97%D7%91%D7%A8_%D7%94%D7%A7%D7%91%D7%99%D7%A0%D7%98_%D7%94%D7%91%D7%98%D7%97%D7%95%D7%A0%D7%99_%D7%9E%D7%93%D7%99%D7%A0%D7%99_%D7%90%D7%9C%D7%99_%D7%9B%D7%94%D7%9F._%D7%9C%D7%99%D7%9B%D7%95%D7%93_%28cropped%29.jpg"},
+  {person:"דוד אמסלם", author:"Nati Gold", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Dudi_Amsalem_1_%28cropped%29.jpg"},
+  {person:"אמיר אוחנה", author:"Avi Ohayon", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Amir_Ohana_-_Official.jpg"},
+  {person:"יואב קיש", author:"Shlomi Amsalem", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Yoav_Kish_%28SHL_9437%29.jpg"},
+  {person:"ניר ברקת", author:"Avi Ohayon", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Nir_Barkat.jpg"},
+  {person:"מירי רגב", author:"Ben Haddad", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Miri_Regev_02_%28cropped%29.jpg"},
+  {person:"מיקי זוהר", author:"אורן כהן", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Miki_Zohar2.jpg"},
+  {person:"אבי דיכטר", author:"Ronen Horesh", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Avi_Dichter_%28R_H_4415%29.jpg"},
+  {person:'ישראל כ"ץ', author:"U.S. Embassy Jerusalem", lic:"by2", url:"https://commons.wikimedia.org/wiki/File:Israel_Katz_on_July_3%2C_2024_%28cropped%29.jpg"},
+  {person:"שלמה קרעי", author:"Shlomi Amsalem", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Shlomo_Karhi_%28SHL_8894%29.jpg"},
+  {person:"דוד ביטן", author:"Nati Shohat", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:David_Bitan_%28AS5V7068%29.jpg"},
+  {person:"יולי אדלשטיין", author:"Ronen Horesh", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:July_Edelstein_%28R_H_4830%29.jpg"},
+  {person:"חיים כץ", author:"Avi Ohayon", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Haim_Katz_2023.jpg"},
+  {person:"גלית דיסטל-אטבריאן", author:"Mark Neyman", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Galit_Distel-Atbaryan.jpg"},
+  {person:"בועז ביסמוט", author:"Eric Sultan", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Boaz_Bismuth_%28cropped%29.jpeg"},
+  {person:"אופיר כץ", author:"שרון גבאי", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Ofir_Katz.jpg"},
+  {person:"גילה גמליאל", author:"Haim Zach", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Gila_Gamliel_1.jpg"},
+  {person:"מאי גולן", author:"Itzhak Harari", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:May_Golan_%28ISH_7000%29.jpg"},
+  {person:"אתי עטייה", author:"ליאת לומברזו", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:%D7%97%22%D7%9B_%D7%90%D7%AA%D7%99_%D7%97%D7%95%D7%94_%D7%A2%D7%98%D7%99%D7%94_%28cropped%29.png"},
+  {person:"קטי שטרית", author:"Ckbsea", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:MK_Keti_Shitrit.jpg"},
+  {person:"טלי גוטליב", author:"Ronen Horesh", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Tali_Gottleib_%28R_H_3795%29.jpg"},
+  {person:"משה פסל", author:"Noam Moskowitz", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Moshe_Passal_%28NOAM9349%29.jpg"},
+  {person:"דן אילוז", author:"Sharon Hasson", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Dan_Illouz_%28crop%29.jpg"},
+  {person:"אליהו רביבו", author:"Noam Moskowitz", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Eliyahu_Revivo_%28NOAM9415%29.jpg"},
+  {person:"שלום דנינו", author:"אביב סבג", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Shalom_Danino.jpg"},
+  {person:"עפיף עבד", author:"Sharon Revivo", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Afef_Abed.jpeg"},
+  {person:"חנוך מילביצקי", author:"Inbal Marmari", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Hanoch_Milwidsky.JPG"},
+  {person:"ניסים ואטורי", author:"Ronen Horesh", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Nissim_Vaturi_%28R_H_4156%29.jpg"},
+  {person:"אריאל קלנר", author:"שרון גבאי", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Ariel_Kallner_%28cropped%29.jpg"},
+  {person:"עמית הלוי", author:"Sharon Gabay", lic:"bysa3", url:"https://commons.wikimedia.org/wiki/File:Amit_Halevi.jpg"},
+  {person:"אביחי בוארון", author:"שרון גבאי", lic:"cc0", url:"https://commons.wikimedia.org/wiki/File:%D7%97%D7%9B_%D7%90%D7%91%D7%99%D7%97%D7%99_%D7%91%D7%95%D7%90%D7%A8%D7%95%D7%9F_%D7%A7%D7%A8%D7%93%D7%99%D7%98_%D7%A6%D7%99%D7%9C%D7%95%D7%9D_%D7%A9%D7%A8%D7%95%D7%9F_%D7%92%D7%91%D7%90%D7%99_-_Copy.jpg"},
+  {person:"אליהו דלל", author:"Ronen Horesh", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Eli_Dallal_%28R_H_3458%29.jpg"},
+  {person:"ששון גואטה", author:"Noam Moskowitz", lic:"bysa4", url:"https://commons.wikimedia.org/wiki/File:Sasson_Guetta_%28NOAM0791%29.jpg"},
+  {person:"אושר שקלים", author:"בן נאום", lic:"cc0", url:"https://commons.wikimedia.org/wiki/File:%D0%9E%D1%88%D0%B5%D1%80_%D0%A8%D0%B5%D0%BA%D0%B0%D0%BB%D0%B8%D0%BC_2.jpg"},
+];
+
+const ROUNDS_TOTAL = 10;
+
+function fmt(n){ return n.toLocaleString("en-US"); }
+
+/* Precompute every 2- and 3-person Likud combo once, so each round can pick
+   one whose sum sits close to the Democrat's vote count. idxs are ascending
+   list-rank indices (LIKUD is sorted by votes desc = 2022 primary rank). */
+function buildCombos(){
+  const out = [];
+  for (let i = 0; i < LIKUD.length; i++){
+    for (let j = i + 1; j < LIKUD.length; j++){
+      out.push({idxs:[i,j], sum: LIKUD[i].votes + LIKUD[j].votes});
+      for (let k = j + 1; k < LIKUD.length; k++){
+        out.push({idxs:[i,j,k], sum: LIKUD[i].votes + LIKUD[j].votes + LIKUD[k].votes});
+      }
+    }
+  }
+  return out;
+}
+const ALL_COMBOS = buildCombos();
+
+/* Balance guarantee: the winning side is decided by a fair coin BEFORE the
+   bundle is chosen, then a bundle is drawn only from combos on that side of
+   the Democrat's count (closest-first tolerance). In expectation exactly 50%
+   of rounds are won by each side, regardless of the pools' shapes. */
+function pickBundleFor(demVotes, demShouldWin){
+  const onSide = ALL_COMBOS.filter(c => demShouldWin ? c.sum < demVotes : c.sum > demVotes);
+  let tolerance = 0.25;
+  let matches = [];
+  while (matches.length === 0 && tolerance <= 3){
+    matches = onSide.filter(c => Math.abs(c.sum - demVotes) / demVotes <= tolerance);
+    if (matches.length === 0) tolerance += 0.25;
+  }
+  if (matches.length === 0 && onSide.length > 0){
+    matches = [onSide.reduce((best, c) =>
+      Math.abs(c.sum - demVotes) < Math.abs(best.sum - demVotes) ? c : best, onSide[0])];
+  }
+  if (matches.length === 0){ // side unreachable (can't happen with real data) — take nearest overall
+    matches = [ALL_COMBOS.reduce((best, c) =>
+      Math.abs(c.sum - demVotes) < Math.abs(best.sum - demVotes) ? c : best, ALL_COMBOS[0])];
+  }
+  const pick = matches[Math.floor(Math.random() * matches.length)];
+  return {bundle: pick.idxs.map(i => LIKUD[i]), sum: pick.sum};
+}
+
+/* ================= GAME (10 rounds) ================= */
+let score = 0, roundIdx = 0, gameOrder = [], currentRound = null, answered = false;
+let bestScore = localStorage.getItem("mky_best10");
+document.getElementById("rounds-total").textContent = ROUNDS_TOTAL;
+document.getElementById("best-score").textContent = bestScore === null ? "–" : bestScore;
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startGame(){
+  score = 0; roundIdx = 0;
+  gameOrder = shuffle(DEMOCRATS).slice(0, ROUNDS_TOTAL);
+  document.getElementById("score").textContent = "0";
+  document.getElementById("game-intro").classList.add("hidden");
+  document.getElementById("game-over").classList.add("hidden");
+  document.getElementById("game-hud").classList.remove("hidden");
+  document.getElementById("game-board").classList.remove("hidden");
+  newRound();
+}
+
+function newRound(){
+  answered = false;
+  const dem = gameOrder[roundIdx];
+  const demShouldWin = Math.random() < 0.5;
+  const {bundle, sum: bundleSum} = pickBundleFor(dem.votes, demShouldWin);
+  currentRound = {dem, bundle, bundleSum};
+
+  document.getElementById("round-no").textContent = roundIdx + 1;
+  document.getElementById("dem-photo").src = dem.photo;
+  document.getElementById("dem-photo").alt = dem.name;
+  document.getElementById("dem-name").textContent = dem.name;
+  document.getElementById("dem-votes").textContent = "";
+  document.getElementById("dem-votes").classList.remove("show");
+
+  const photosWrap = document.getElementById("likud-photos");
+  photosWrap.innerHTML = "";
+  bundle.forEach(c => {
+    const img = document.createElement("img");
+    img.src = c.photo; img.alt = c.name; img.className = "avatar-sm";
+    photosWrap.appendChild(img);
+  });
+  document.getElementById("likud-names").textContent = bundle.map(c => c.name).join(" + ");
+  document.getElementById("likud-votes").textContent = "";
+  document.getElementById("likud-votes").classList.remove("show");
+
+  document.getElementById("verdict").textContent = "";
+  document.getElementById("next-round").classList.add("hidden");
+  document.getElementById("pick-dem").disabled = false;
+  document.getElementById("pick-likud").disabled = false;
+}
+
+function answer(pickedDem){
+  if (answered) return;
+  answered = true;
+  const {dem, bundleSum} = currentRound;
+  const demWins = dem.votes > bundleSum;
+  const correct = (pickedDem && demWins) || (!pickedDem && !demWins);
+
+  document.getElementById("dem-votes").textContent = fmt(dem.votes);
+  document.getElementById("dem-votes").classList.add("show");
+  document.getElementById("likud-votes").textContent = fmt(bundleSum);
+  document.getElementById("likud-votes").classList.add("show");
+
+  const verdictEl = document.getElementById("verdict");
+  if (correct){
+    score++;
+    verdictEl.textContent = "✔ נכון!";
+    verdictEl.className = "text-center font-bold text-lg mb-4 h-7 text-emerald-600 pop";
+  } else {
+    verdictEl.textContent = "✗ טעות — " + (demWins ? dem.name : "צירוף הליכוד") + " ניצחו";
+    verdictEl.className = "text-center font-bold text-lg mb-4 h-7 text-rose-600 pop";
+  }
+  document.getElementById("score").textContent = score;
+  document.getElementById("pick-dem").disabled = true;
+  document.getElementById("pick-likud").disabled = true;
+  roundIdx++;
+  const nextBtn = document.getElementById("next-round");
+  nextBtn.textContent = roundIdx < ROUNDS_TOTAL ? "הסיבוב הבא ←" : "לתוצאה הסופית 🏁";
+  nextBtn.classList.remove("hidden");
+}
+
+function endGame(){
+  if (bestScore === null || score > parseInt(bestScore, 10)){
+    bestScore = String(score);
+    localStorage.setItem("mky_best10", bestScore);
+  }
+  document.getElementById("best-score").textContent = bestScore;
+  document.getElementById("game-board").classList.add("hidden");
+  document.getElementById("game-over").classList.remove("hidden");
+  document.getElementById("final-score").textContent = score;
+  document.getElementById("final-total").textContent = ROUNDS_TOTAL;
+  const ratio = score / ROUNDS_TOTAL;
+  const [emoji, msg] =
+    ratio >= 0.9 ? ["🏆", "מומחה.ית פריימריז! כמעט מושלם."] :
+    ratio >= 0.7 ? ["🔥", "יפה מאוד — יש לכם חוש למספרים."] :
+    ratio >= 0.5 ? ["🙂", "לא רע! נסו שוב לשפר את השיא."] :
+                   ["🎲", "קשה מהצפוי, נכון? נסו שוב."];
+  document.getElementById("final-emoji").textContent = emoji;
+  document.getElementById("final-msg").textContent = msg;
+}
+
+document.getElementById("pick-dem").addEventListener("click", () => answer(true));
+document.getElementById("pick-likud").addEventListener("click", () => answer(false));
+document.getElementById("next-round").addEventListener("click", () => {
+  if (roundIdx < ROUNDS_TOTAL) newRound(); else endGame();
+});
+document.getElementById("play-again").addEventListener("click", startGame);
+document.getElementById("start-game").addEventListener("click", startGame);
+
+/* ================= EXPLORER ================= */
+/* "As senior as possible": among combos summing to LESS than the Democrat's
+   votes, pick the one whose member ranks are lexicographically smallest —
+   i.e. it must contain the highest-ranked Likud member feasible, then the
+   next-highest, etc. */
+function bestBundleUnder(votes){
+  let best = null;
+  for (const c of ALL_COMBOS){
+    if (c.sum >= votes) continue;
+    if (best === null || lexLess(c.idxs, best.idxs)) best = c;
+  }
+  return best;
+}
+function lexLess(a, b){
+  const n = Math.min(a.length, b.length);
+  for (let i = 0; i < n; i++){
+    if (a[i] !== b[i]) return a[i] < b[i];
+  }
+  return a.length > b.length; // same seniors → prefer the bigger bundle (closer sum, stronger claim)
+}
+
+let currentExplore = null;
+
+function buildDemGrid(){
+  const grid = document.getElementById("dem-grid");
+  DEMOCRATS.slice().sort((a, b) => a.place - b.place).forEach(dem => {
+    const btn = document.createElement("button");
+    btn.className = "card-btn flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-sky-50 border border-transparent";
+    btn.innerHTML = `<img src="${dem.photo}" alt="${dem.name}" class="avatar-chip">` +
+      `<span class="text-[11px] font-semibold text-slate-700 leading-tight text-center">${dem.name}</span>`;
+    btn.addEventListener("click", () => {
+      grid.querySelectorAll("button").forEach(b => b.classList.remove("border-blue-500", "bg-sky-50"));
+      btn.classList.add("border-blue-500", "bg-sky-50");
+      showExplore(dem);
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function showExplore(dem){
+  const combo = bestBundleUnder(dem.votes);
+  if (!combo) return;
+  const bundle = combo.idxs.map(i => LIKUD[i]);
+  currentExplore = {dem, bundle, sum: combo.sum};
+
+  document.getElementById("ex-dem-photo").src = dem.photo;
+  document.getElementById("ex-dem-photo").alt = dem.name;
+  document.getElementById("ex-dem-name").textContent = dem.name;
+  document.getElementById("ex-dem-place").textContent = `מקום ${dem.place} ברשימת הדמוקרטים`;
+  document.getElementById("ex-dem-votes").textContent = fmt(dem.votes);
+
+  const photosWrap = document.getElementById("ex-likud-photos");
+  photosWrap.innerHTML = "";
+  bundle.forEach(c => {
+    const img = document.createElement("img");
+    img.src = c.photo; img.alt = c.name; img.className = "avatar-sm";
+    photosWrap.appendChild(img);
+  });
+  document.getElementById("ex-likud-names").textContent = bundle.map(c => c.name).join(" + ");
+  document.getElementById("ex-likud-votes").textContent = fmt(combo.sum);
+
+  document.getElementById("ex-summary").innerHTML =
+    `<b>${dem.name}</b> קיבל.ה יותר קולות מ<b>${bundle.map(c => c.name).join(" + ")}</b> ביחד — ` +
+    `בהפרש של <b class="tabular-nums">${fmt(dem.votes - combo.sum)}</b> קולות.`;
+
+  const result = document.getElementById("explore-result");
+  result.classList.remove("hidden");
+  result.scrollIntoView({behavior: "smooth", block: "nearest"});
+}
+
+/* ================= TABS & SHARE ================= */
+function switchTab(game){
+  document.getElementById("panel-game").classList.toggle("hidden", !game);
+  document.getElementById("panel-explore").classList.toggle("hidden", game);
+  const on = "px-5 py-2 rounded-lg bg-blue-700 text-white transition";
+  const off = "px-5 py-2 rounded-lg text-slate-600 transition";
+  document.getElementById("tab-game").className = game ? on : off;
+  document.getElementById("tab-explore").className = game ? off : on;
+}
+document.getElementById("tab-game").addEventListener("click", () => switchTab(true));
+document.getElementById("tab-explore").addEventListener("click", () => switchTab(false));
+
+function shareText(text){
+  const full = `${text}\n${location.href}`;
+  if (navigator.share){
+    navigator.share({text: full}).catch(() => fallbackShare(full));
+  } else {
+    fallbackShare(full);
+  }
+}
+function fallbackShare(full){
+  window.open("https://wa.me/?text=" + encodeURIComponent(full), "_blank", "noopener");
+}
+document.getElementById("share-score").addEventListener("click", () => {
+  shareText(`קלעתי ${score}/${ROUNDS_TOTAL} במשחק "מי קיבל יותר?" — פריימריז הדמוקרטים מול הליכוד. נסו גם אתם:`);
+});
+document.getElementById("ex-share").addEventListener("click", () => {
+  if (!currentExplore) return;
+  const {dem, bundle, sum} = currentExplore;
+  shareText(`${dem.name} קיבל.ה בפריימריז הדמוקרטים ${fmt(dem.votes)} קולות — יותר מ${bundle.map(c => c.name).join(" + ")} ביחד (${fmt(sum)}) בפריימריז הליכוד. בדקו בעצמכם:`);
+});
+
+function renderCredits(){
+  const el = document.getElementById("photo-credits");
+  el.innerHTML = PHOTO_CREDITS.map(c => {
+    const lic = LIC[c.lic];
+    return `<div>${c.person} — <a class="text-blue-600 hover:underline" href="${c.url}" target="_blank" rel="noopener">ויקישיתוף</a>, ` +
+      `צילום: ${c.author}, <a class="text-blue-600 hover:underline" href="${lic.url}" target="_blank" rel="noopener">${lic.label}</a></div>`;
+  }).join("");
+}
+
+buildDemGrid();
+renderCredits();
+</script>
+</body>
+</html>
