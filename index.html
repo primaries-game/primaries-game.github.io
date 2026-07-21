@@ -83,6 +83,7 @@
           <div id="likud-photos" class="flex justify-center items-center gap-2 mb-3"></div>
           <div id="likud-names" class="text-sm font-bold mb-2 leading-snug"></div>
           <div id="likud-votes" class="reveal text-2xl font-black tabular-nums"></div>
+          <div id="likud-breakdown" class="reveal text-xs font-semibold text-slate-300 tabular-nums mt-1"></div>
         </button>
       </div>
 
@@ -116,7 +117,7 @@
   <section id="panel-explore" class="hidden">
     <div class="bg-white shadow-xl rounded-2xl p-5 mb-4">
       <h2 class="text-xl font-extrabold text-blue-900 mb-1">כמה חברי ליכוד שווה מועמד.ת אחד.ת?</h2>
-      <p class="text-sm text-slate-600 mb-4">בחרו מועמד.ת מרשימת הדמוקרטים, ונמצא את צירוף חברי הליכוד הבכירים ביותר שקיבלו ביחד <b>פחות</b> קולות בפריימריז שלהם.</p>
+      <p class="text-sm text-slate-600 mb-4">בחרו מועמד.ת מרשימת הדמוקרטים, ונגריל צירוף של 2–5 חברי ליכוד שקיבלו ביחד <b>פחות</b> קולות בפריימריז שלהם. לחצו שוב — ותקבלו צירוף אחר.</p>
       <div id="dem-grid" class="grid grid-cols-4 sm:grid-cols-5 gap-2"></div>
     </div>
 
@@ -134,10 +135,14 @@
           <div id="ex-likud-photos" class="flex justify-center items-center gap-2 mb-3"></div>
           <div id="ex-likud-names" class="text-sm font-bold mb-2 leading-snug"></div>
           <div id="ex-likud-votes" class="text-2xl font-black tabular-nums"></div>
+          <div id="ex-likud-breakdown" class="text-xs font-semibold text-slate-300 tabular-nums mt-1"></div>
         </div>
       </div>
       <p id="ex-summary" class="text-slate-700 font-semibold mb-4"></p>
-      <button id="ex-share" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שתפו 📤</button>
+      <div class="flex justify-center gap-3">
+        <button id="ex-reroll" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">צירוף אחר 🎲</button>
+        <button id="ex-share" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-colors">שתפו 📤</button>
+      </div>
     </div>
   </section>
 
@@ -291,6 +296,11 @@ const PHOTO_CREDITS = [
 const ROUNDS_TOTAL = 10;
 
 function fmt(n){ return n.toLocaleString("en-US"); }
+/* "(X + Y + Z)" in the same visual order as the candidates (RTL: first on
+   the right, like the names line). */
+function breakdown(bundle){
+  return "(" + bundle.map(c => fmt(c.votes)).join(" + ") + ")";
+}
 
 /* Precompute every 2- and 3-person Likud combo once, so each round can pick
    one whose sum sits close to the Democrat's vote count. idxs are ascending
@@ -383,6 +393,8 @@ function newRound(){
   document.getElementById("likud-names").textContent = bundle.map(c => c.name).join(" + ");
   document.getElementById("likud-votes").textContent = "";
   document.getElementById("likud-votes").classList.remove("show");
+  document.getElementById("likud-breakdown").textContent = "";
+  document.getElementById("likud-breakdown").classList.remove("show");
 
   document.getElementById("verdict").textContent = "";
   document.getElementById("next-round").classList.add("hidden");
@@ -393,7 +405,7 @@ function newRound(){
 function answer(pickedDem){
   if (answered) return;
   answered = true;
-  const {dem, bundleSum} = currentRound;
+  const {dem, bundle, bundleSum} = currentRound;
   const demWins = dem.votes > bundleSum;
   const correct = (pickedDem && demWins) || (!pickedDem && !demWins);
 
@@ -401,6 +413,8 @@ function answer(pickedDem){
   document.getElementById("dem-votes").classList.add("show");
   document.getElementById("likud-votes").textContent = fmt(bundleSum);
   document.getElementById("likud-votes").classList.add("show");
+  document.getElementById("likud-breakdown").textContent = breakdown(bundle);
+  document.getElementById("likud-breakdown").classList.add("show");
 
   const verdictEl = document.getElementById("verdict");
   if (correct){
@@ -449,24 +463,27 @@ document.getElementById("play-again").addEventListener("click", startGame);
 document.getElementById("start-game").addEventListener("click", startGame);
 
 /* ================= EXPLORER ================= */
-/* "As senior as possible": among combos summing to LESS than the Democrat's
-   votes, pick the one whose member ranks are lexicographically smallest —
-   i.e. it must contain the highest-ranked Likud member feasible, then the
-   next-highest, etc. */
-function bestBundleUnder(votes){
-  let best = null;
-  for (const c of ALL_COMBOS){
-    if (c.sum >= votes) continue;
-    if (best === null || lexLess(c.idxs, best.idxs)) best = c;
+/* A DIFFERENT random bundle on every pick, 2-5 members, still summing to
+   LESS than the Democrat's votes. Random greedy maximal fill: walk the
+   roster in shuffled order, add anyone who still fits under the target
+   (cap 5). Several attempts are drawn and the pick is made among the
+   close-sum ones (>=85% of the target) so the matchup stays dramatic;
+   if no attempt gets close, the closest attempt wins. */
+function randomBundleUnder(votes){
+  const attempts = [];
+  for (let t = 0; t < 15; t++){
+    const order = shuffle(LIKUD.map((_, i) => i));
+    const idxs = []; let sum = 0;
+    for (const i of order){
+      if (idxs.length >= 5) break;
+      if (sum + LIKUD[i].votes < votes){ idxs.push(i); sum += LIKUD[i].votes; }
+    }
+    if (idxs.length >= 2) attempts.push({idxs: idxs.sort((a, b) => a - b), sum});
   }
-  return best;
-}
-function lexLess(a, b){
-  const n = Math.min(a.length, b.length);
-  for (let i = 0; i < n; i++){
-    if (a[i] !== b[i]) return a[i] < b[i];
-  }
-  return a.length > b.length; // same seniors → prefer the bigger bundle (closer sum, stronger claim)
+  if (attempts.length === 0) return null; // target below every 2-member sum — can't happen with real data
+  const close = attempts.filter(c => c.sum >= votes * 0.85);
+  const pool = close.length ? close : [attempts.reduce((b, c) => c.sum > b.sum ? c : b, attempts[0])];
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 let currentExplore = null;
@@ -488,7 +505,7 @@ function buildDemGrid(){
 }
 
 function showExplore(dem){
-  const combo = bestBundleUnder(dem.votes);
+  const combo = randomBundleUnder(dem.votes);
   if (!combo) return;
   const bundle = combo.idxs.map(i => LIKUD[i]);
   currentExplore = {dem, bundle, sum: combo.sum};
@@ -508,6 +525,7 @@ function showExplore(dem){
   });
   document.getElementById("ex-likud-names").textContent = bundle.map(c => c.name).join(" + ");
   document.getElementById("ex-likud-votes").textContent = fmt(combo.sum);
+  document.getElementById("ex-likud-breakdown").textContent = breakdown(bundle);
 
   document.getElementById("ex-summary").innerHTML =
     `<b>${dem.name}</b> קיבל.ה יותר קולות מ<b>${bundle.map(c => c.name).join(" + ")}</b> ביחד — ` +
@@ -548,6 +566,9 @@ document.getElementById("share-fb").addEventListener("click", () => {
 });
 document.getElementById("share-wa").addEventListener("click", () => {
   window.open("https://wa.me/?text=" + encodeURIComponent(scoreMsg() + "\n" + GAME_URL), "_blank", "noopener");
+});
+document.getElementById("ex-reroll").addEventListener("click", () => {
+  if (currentExplore) showExplore(currentExplore.dem);
 });
 document.getElementById("ex-share").addEventListener("click", () => {
   if (!currentExplore) return;
