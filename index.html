@@ -422,7 +422,7 @@ function answer(pickedDem){
     verdictEl.textContent = "✔ נכון!";
     verdictEl.className = "text-center font-bold text-lg mb-4 h-7 text-emerald-600 pop";
   } else {
-    verdictEl.textContent = "✗ טעות — " + (demWins ? dem.name : "צירוף הליכוד") + " ניצחו";
+    verdictEl.textContent = "✗ טעות — התשובה הנכונה: " + (demWins ? dem.name : "צירוף הליכוד");
     verdictEl.className = "text-center font-bold text-lg mb-4 h-7 text-rose-600 pop";
   }
   document.getElementById("score").textContent = score;
